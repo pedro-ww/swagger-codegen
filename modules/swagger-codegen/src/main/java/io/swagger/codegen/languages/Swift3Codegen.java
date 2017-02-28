@@ -45,7 +45,7 @@ public class Swift3Codegen extends DefaultCodegen implements CodegenConfig {
     protected boolean unwrapRequired;
     protected boolean swiftUseApiNamespace;
     protected String[] responseAs = new String[0];
-    protected String sourceFolder = "Classes" + File.separator + "Swaggers";
+    protected String sourceFolder = "Pod" + File.separator + "Classes";
     private static final Pattern PATH_PARAM_PATTERN = Pattern.compile("\\{[a-zA-Z_]+\\}");
 
     @Override
@@ -216,16 +216,34 @@ public class Swift3Codegen extends DefaultCodegen implements CodegenConfig {
             additionalProperties.put(POD_AUTHORS, DEFAULT_POD_AUTHORS);
         }
 
+        // Example app files
+        String exampleAppFolder = "SwaggerExampleApp";
+        String exampleAppRootFolder = exampleAppFolder + File.separator + "SwaggerExampleApp";
+        String testFolder = exampleAppFolder + File.separator + "SwaggerExampleAppTests";
+        supportingFiles.add(new SupportingFile("Podfile.mustache", exampleAppFolder,"Podfile"));
+        supportingFiles.add(new SupportingFile("AppDelegate.mustache", exampleAppRootFolder,"AppDelegate.swift"));
+        supportingFiles.add(new SupportingFile("Info.mustache", exampleAppRootFolder,"Info.plist"));
+
+        // Example project file
+        String projectFileContentPath = exampleAppFolder + File.separator + "SwaggerExampleApp.xcodeproj";
+        String projectFileWorkSpacePath = projectFileContentPath + File.separator + "project.xcworkspace";
+        String userScheme = projectFileContentPath + File.separator + "xcuserdata" + File.separator + "swagger.xcuserdatad" + File.separator + "xcschemes";
+        supportingFiles.add(new SupportingFile("project.mustache", projectFileContentPath,"project.pbxproj"));
+        supportingFiles.add(new SupportingFile("projectWorkSpace.mustache", projectFileWorkSpacePath,"contents.xcworkspacedata"));
+        supportingFiles.add(new SupportingFile("SwaggerExampleAppXCScheme.mustache", userScheme,"SwaggerClient.xcscheme"));
+        supportingFiles.add(new SupportingFile("xcschememanagement.mustache", userScheme,"xcschememanagement.plist"));
+
+        // Test files
+        supportingFiles.add(new SupportingFile("SwaggerModelTest.mustache", testFolder,"SwaggerModelTest.swift"));
+        supportingFiles.add(new SupportingFile("SwaggerAPITest.mustache", testFolder,"SwaggerAPITest.swift"));
+        supportingFiles.add(new SupportingFile("ServiceIntegrationTest.mustache", testFolder, "ServiceIntegrationTest.swift"));
+        supportingFiles.add(new SupportingFile("SwaggerMockModel.mustache", testFolder, "SwaggerMockModel.swift"));
+        supportingFiles.add(new SupportingFile("testInfo.mustache", testFolder,"Info.plist"));
+
+        // Swagger client Pod supporting files
         supportingFiles.add(new SupportingFile("Podspec.mustache", "", projectName + ".podspec"));
-        supportingFiles.add(new SupportingFile("Cartfile.mustache", "", "Cartfile"));
-        supportingFiles.add(new SupportingFile("APIHelper.mustache", sourceFolder, "APIHelper.swift"));
-        supportingFiles.add(new SupportingFile("AlamofireImplementations.mustache", sourceFolder,
-                "AlamofireImplementations.swift"));
-        supportingFiles.add(new SupportingFile("Extensions.mustache", sourceFolder, "Extensions.swift"));
         supportingFiles.add(new SupportingFile("Models.mustache", sourceFolder, "Models.swift"));
         supportingFiles.add(new SupportingFile("APIs.mustache", sourceFolder, "APIs.swift"));
-        supportingFiles.add(new SupportingFile("git_push.sh.mustache", "", "git_push.sh"));
-        supportingFiles.add(new SupportingFile("gitignore.mustache", "", ".gitignore"));
 
     }
 

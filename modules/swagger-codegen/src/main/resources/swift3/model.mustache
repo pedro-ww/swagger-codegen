@@ -26,7 +26,7 @@ public enum {{classname}}: {{dataType}} {
 public typealias {{classname}} = {{dataType}}
 {{/vars.isEmpty}}
 {{^vars.isEmpty}}
-open class {{classname}}: {{#parent}}{{{parent}}}{{/parent}}{{^parent}}JSONEncodable{{/parent}} {
+public struct {{classname}} {
 {{#vars}}
 {{#isEnum}}
     public enum {{enumName}}: {{^isContainer}}{{datatype}}{{/isContainer}}{{#isContainer}}String{{/isContainer}} { {{#allowableValues}}{{#enumVars}}
@@ -40,37 +40,100 @@ open class {{classname}}: {{#parent}}{{{parent}}}{{/parent}}{{^parent}}JSONEncod
     {{/description}}public var {{name}}: {{{datatypeWithEnum}}}{{^unwrapRequired}}?{{/unwrapRequired}}{{#unwrapRequired}}{{^required}}?{{/required}}{{/unwrapRequired}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}
 {{/isEnum}}
 {{^isEnum}}
-    {{#description}}/** {{description}} */
-    {{/description}}public var {{name}}: {{{datatype}}}{{^unwrapRequired}}?{{/unwrapRequired}}{{#unwrapRequired}}{{^required}}?{{/required}}{{/unwrapRequired}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}
+    public {{^required}}var{{/required}}{{#required}}let{{/required}} {{name}}: {{{datatype}}}{{^required}}?{{/required}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}
 {{/isEnum}}
 {{/vars}}
 
-{{^unwrapRequired}}
-    {{^parent}}public init() {}{{/parent}}
-{{/unwrapRequired}}
-{{#unwrapRequired}}
-    public init({{#allVars}}{{^-first}}, {{/-first}}{{name}}: {{#isEnum}}{{datatypeWithEnum}}{{/isEnum}}{{^isEnum}}{{datatype}}{{/isEnum}}{{^required}}?=nil{{/required}}{{/allVars}}) {
+    public init({{#allVars}}{{^-first}}, {{/-first}}{{name}}: {{#isEnum}}{{datatypeWithEnum}}{{/isEnum}}{{^isEnum}}{{datatype}}{{/isEnum}}{{^required}}? = nil {{/required}}{{/allVars}}) {
         {{#vars}}
         self.{{name}} = {{name}}
         {{/vars}}
         {{#parent}}super.init({{#parentVars}}{{^-first}}, {{/-first}}{{name}}: {{name}}{{/parentVars}}){{/parent}}
     }
-{{/unwrapRequired}}
+}
 
-    // MARK: JSONEncodable
-    {{#parent}}override {{/parent}}open func encodeToJSON() -> Any {
-        var nillableDictionary = {{#parent}}super.encodeToJSON() as? [String:Any?] ?? {{/parent}}[String:Any?](){{#vars}}{{#isNotContainer}}{{#isPrimitiveType}}{{^isEnum}}{{#isInteger}}
-        nillableDictionary["{{baseName}}"] = self.{{name}}{{^unwrapRequired}}?{{/unwrapRequired}}{{#unwrapRequired}}{{^required}}?{{/required}}{{/unwrapRequired}}.encodeToJSON(){{/isInteger}}{{#isLong}}
-        nillableDictionary["{{baseName}}"] = self.{{name}}{{^unwrapRequired}}?{{/unwrapRequired}}{{#unwrapRequired}}{{^required}}?{{/required}}{{/unwrapRequired}}.encodeToJSON(){{/isLong}}{{^isLong}}{{^isInteger}}
-        nillableDictionary["{{baseName}}"] = self.{{name}}{{/isInteger}}{{/isLong}}{{/isEnum}}{{/isPrimitiveType}}{{#isEnum}}
-        nillableDictionary["{{baseName}}"] = self.{{name}}{{^unwrapRequired}}?{{/unwrapRequired}}{{#unwrapRequired}}{{^required}}?{{/required}}{{/unwrapRequired}}.rawValue{{/isEnum}}{{^isPrimitiveType}}
-        nillableDictionary["{{baseName}}"] = self.{{name}}{{^unwrapRequired}}?{{/unwrapRequired}}{{#unwrapRequired}}{{^required}}?{{/required}}{{/unwrapRequired}}.encodeToJSON(){{/isPrimitiveType}}{{/isNotContainer}}{{#isContainer}}{{^isEnum}}
-        nillableDictionary["{{baseName}}"] = self.{{name}}{{^unwrapRequired}}?{{/unwrapRequired}}{{#unwrapRequired}}{{^required}}?{{/required}}{{/unwrapRequired}}.encodeToJSON(){{/isEnum}}{{#isEnum}}{{#isListContainer}}
-        nillableDictionary["{{baseName}}"] = self.{{name}}{{^unwrapRequired}}?{{/unwrapRequired}}{{#unwrapRequired}}{{^required}}?{{/required}}{{/unwrapRequired}}.map({$0.rawValue}).encodeToJSON(){{/isListContainer}}{{#isMapContainer}}//TODO: handle enum map scenario{{/isMapContainer}}{{/isEnum}}{{/isContainer}}{{/vars}}
-        let dictionary: [String:Any] = APIHelper.rejectNil(nillableDictionary) ?? [:]
-        return dictionary
+extension {{classname}} {
+    public init?(dictionary: [String:AnyObject]) {
+    {{#optionalVars}}{{^isDate}}{{^isDateTime}}{{^isEnum}}{{^isListContainer}}{{^isPrimitiveType}}{{#isNotContainer}}
+        var {{name}}: {{complexType}}?
+        if let {{name}}Object = dictionary["{{baseName}}"] as? [String: AnyObject] {
+            {{name}} = {{complexType}}(dictionary: {{name}}Object)
+        }
+    {{/isNotContainer}}{{/isPrimitiveType}}{{#isPrimitiveType}}
+        let {{name}} = dictionary["{{baseName}}"] as? {{datatype}}
+    {{/isPrimitiveType}}{{/isListContainer}}{{/isEnum}}{{/isDateTime}}{{/isDate}}{{#isDate}}
+        var {{name}}: Date? = nil
+        if let dateString = dictionary["{{baseName}}"] as? String {
+            {{name}} = ModelsHelper.sharedInstance.decodeDate(sourceString: dateString)
+        }
+    {{/isDate}}{{#isDateTime}}
+        var {{name}}: Date? = nil
+        if let dateString = dictionary["{{baseName}}"] as? String {
+            {{name}} = ModelsHelper.sharedInstance.decodeDate(sourceString: dateString)
+        }
+    {{/isDateTime}}{{#isListContainer}}{{^isPrimitiveType}}
+        var {{name}}: {{datatype}}?
+        if let {{name}}JsonObjectList = dictionary["{{baseName}}"] as? [[String: AnyObject]] {
+            {{name}} = {{datatype}}()
+            
+            for {{name}}Json in {{name}}JsonObjectList {
+                if let item = {{complexType}}(dictionary: {{name}}Json) {
+                    {{name}}!.append(item)
+                }
+            }
+        }
+    {{/isPrimitiveType}}{{#isPrimitiveType}}
+        let {{name}} = dictionary["{{name}}"] as? {{datatype}}
+    {{/isPrimitiveType}}{{/isListContainer}}{{#isEnum}}
+        // TODO: write code in template to implement enum properties 
+    {{/isEnum}}{{/optionalVars}}{{#requiredVars}}{{^isDate}}{{^isDateTime}}{{^isEnum}}{{^isListContainer}}{{#isPrimitiveType}}{{#isBoolean}}
+        let {{name}} = dictionary["{{baseName}}"] as? Bool ?? false
+    {{/isBoolean}}{{^isBoolean}}
+        guard let {{name}} = dictionary["{{baseName}}"] as? {{datatype}}
+            else { return nil }
+    {{/isBoolean}}{{/isPrimitiveType}}{{^isPrimitiveType}}{{#isNotContainer}}
+        guard let {{name}}Object = dictionary["{{baseName}}"] as? [String: AnyObject]
+            else { return nil }
+
+        guard let {{name}} = {{complexType}}(dictionary: {{name}}Object)
+            else { return nil }
+    {{/isNotContainer}}{{/isPrimitiveType}}{{/isListContainer}}{{/isEnum}}{{/isDateTime}}{{/isDate}}{{#isDate}}
+        guard let {{name}}String = dictionary["{{baseName}}"] as? String 
+            else { return nil }
+
+        guard let {{name}} = ModelsHelper.sharedInstance.decodeDate(sourceString: {{name}}String)
+            else { return nil }
+    {{/isDate}}{{#isDateTime}}
+        guard let {{name}}String = dictionary["{{baseName}}"] as? String 
+            else { return nil }
+
+        guard let {{name}} = ModelsHelper.sharedInstance.decodeDate(sourceString: {{name}}String)
+            else { return nil }
+    {{/isDateTime}}{{#isListContainer}}
+        var {{name}} = {{datatype}}()
+        if let {{name}}JsonObjectList = dictionary["{{baseName}}"] as? [[String: AnyObject]] {            
+            for {{name}}Json in {{name}}JsonObjectList {
+                if let item = {{complexType}}(dictionary: {{name}}Json) {
+                    {{name}}.append(item)
+                }
+            }
+        }
+    {{/isListContainer}}{{#isEnum}}
+        // TODO: write code in template to implement enum properties 
+    {{/isEnum}}{{/requiredVars}}
+        self.init({{#allVars}}{{^-first}}, {{/-first}}{{name}}: {{name}}{{/allVars}})
+
     }
 }
+
+extension {{classname}}: Equatable {
+
+    public static func == (lhs: {{classname}}, rhs: {{classname}}) -> Bool {
+            return {{^hasRequired}}false{{/hasRequired}}{{#requiredVars}}{{^-first}}
+                && {{/-first}}lhs.{{name}} == rhs.{{name}}{{/requiredVars}}
+    }
+}
+
 {{/vars.isEmpty}}
 {{/isEnum}}
 {{/isArrayModel}}
